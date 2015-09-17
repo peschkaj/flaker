@@ -5,3 +5,4 @@ authors = ["Jeremiah Peschka <jeremiah.peschka@gmail.com>"]
 
 [dependencies]
 time = "0.1"
+num = "0.1.27"

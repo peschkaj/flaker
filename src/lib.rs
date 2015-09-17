@@ -1,4 +1,7 @@
 extern crate time;
+extern crate num;
+use num::BigUint;
+use num::bigint::{ToBigInt};
 use time::Timespec;
 use time::Tm;
 use std::error;
@@ -26,19 +29,42 @@ impl Flaker {
 			   }
 	}
 
-	fn update(&self) -> Result<(), String> {
+	fn update(&mut self) -> Result<(), String> {
 		let current_time_in_ms = Flaker::current_time_in_ms();
 
 		if self.last_oxidized_in_ms > current_time_in_ms {
 			return Result::Err("The clock is running backwards".to_owned());
 		}
 
+		if self.last_oxidized_in_ms < current_time_in_ms {
+			self.counter = 0;
+		}
+		else {
+			self.counter += 1;
+		}
 
+		self.last_oxidized_in_ms = current_time_in_ms;
 
 		Ok(())
 	}
 
-	pub fn current_time_in_ms() -> u64 {
+	pub fn get_id(&self) -> BigUint {
+		let mut bytes: Vec<u8> = Vec::new();
+
+		// first two bytes are the key space counter
+		bytes[0] = self.counter as u8;
+		bytes[1] = (self.counter >> 8) as u8;
+
+		// next 6 bytes are the worker id
+		(0..5).map(|x| bytes[x + 1] = (self.identifier >> (x * 8)) as u8);
+
+		// last 8 bytes are the time counter
+		(0..7).map(|x| bytes[x + 8] = (self.last_oxidized_in_ms >> (x * 8)) as u8);
+
+		BigUint::from_bytes_le(&bytes)
+	}
+
+	fn current_time_in_ms() -> u64 {
 		let now = time::now();
 		let now_ts = now.to_timespec();
 
