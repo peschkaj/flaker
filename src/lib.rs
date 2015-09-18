@@ -5,6 +5,16 @@ use num::BigUint;
 use time::Timespec;
 use byteorder::{LittleEndian, WriteBytesExt};
 
+#[derive(Debug)]
+enum FlakeError {
+    ClockIsRunningBackwards
+}
+
+trait HasFlakes {
+	fn update(&mut self) -> Result<(), FlakeError>;
+	fn get_id(&mut self) -> BigUint;
+}
+
 struct Flaker {
     identifier: Vec<u8>,
     epoch: u64,
@@ -35,11 +45,20 @@ impl Flaker {
 			   }
 	}
 
-	fn update(&mut self) -> Result<(), String> {
+	fn current_time_in_ms() -> u64 {
+		let now = time::now();
+		let now_ts = now.to_timespec();
+
+		now_ts.sec as u64 + now_ts.nsec as u64 / 1000 / 1000
+	}
+}
+
+impl HasFlakes for Flaker {
+	fn update(&mut self) -> Result<(), FlakeError> {
 		let current_time_in_ms = Flaker::current_time_in_ms();
 
 		if self.last_oxidized_in_ms > current_time_in_ms {
-			return Result::Err("The clock is running backwards".to_owned());
+			return Result::Err(FlakeError::ClockIsRunningBackwards);
 		}
 
 		if self.last_oxidized_in_ms < current_time_in_ms {
@@ -54,7 +73,7 @@ impl Flaker {
 		Ok(())
 	}
 
-	pub fn get_id(&mut self) -> BigUint {
+	fn get_id(&mut self) -> BigUint {
 		self.update();
 
 		let mut bytes = Vec::new();
@@ -76,13 +95,6 @@ impl Flaker {
 		}
 
 		BigUint::from_bytes_le(&bytes)
-	}
-
-	fn current_time_in_ms() -> u64 {
-		let now = time::now();
-		let now_ts = now.to_timespec();
-
-		now_ts.sec as u64 + now_ts.nsec as u64 / 1000 / 1000
 	}
 }
 
