@@ -2,10 +2,7 @@ extern crate time;
 extern crate num;
 extern crate byteorder;
 use num::BigUint;
-use num::bigint::{ToBigInt};
 use time::Timespec;
-use time::Tm;
-use std::error;
 use byteorder::{LittleEndian, WriteBytesExt};
 
 struct Flaker {
