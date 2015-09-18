@@ -18,7 +18,7 @@ trait HasFlakes {
 struct Flaker {
     identifier: Vec<u8>,
     epoch: u64,
-    last_oxidized_in_ms: u64,
+    last_generated_time_ms: u64,
     counter: u32,
 }
 
@@ -40,7 +40,7 @@ impl Flaker {
 
 		Flaker { identifier: l_identifier,
 				 epoch: epoch,
-				 last_oxidized_in_ms: Flaker::current_time_in_ms(), 
+				 last_generated_time_ms: Flaker::current_time_in_ms(), 
 				 counter: 0
 			   }
 	}
@@ -57,18 +57,18 @@ impl HasFlakes for Flaker {
 	fn update(&mut self) -> Result<(), FlakeError> {
 		let current_time_in_ms = Flaker::current_time_in_ms();
 
-		if self.last_oxidized_in_ms > current_time_in_ms {
+		if self.last_generated_time_ms > current_time_in_ms {
 			return Result::Err(FlakeError::ClockIsRunningBackwards);
 		}
 
-		if self.last_oxidized_in_ms < current_time_in_ms {
+		if self.last_generated_time_ms < current_time_in_ms {
 			self.counter = 0;
 		}
 		else {
 			self.counter += 1;
 		}
 
-		self.last_oxidized_in_ms = current_time_in_ms;
+		self.last_generated_time_ms = current_time_in_ms;
 
 		Ok(())
 	}
@@ -88,7 +88,7 @@ impl HasFlakes for Flaker {
 
 		let mut wtr = vec![];
 
-		wtr.write_u64::<LittleEndian>(self.last_oxidized_in_ms).unwrap();
+		wtr.write_u64::<LittleEndian>(self.last_generated_time_ms).unwrap();
 
 		for w in wtr {
 			bytes.push(w);
