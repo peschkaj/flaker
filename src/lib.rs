@@ -70,8 +70,6 @@ impl Flaker {
 			bytes.push(*i);
 		}
 
-		println!("BLURPLE!");
-
 		let mut wtr = vec![];
 
 		wtr.write_u64::<LittleEndian>(self.last_oxidized_in_ms).unwrap();
@@ -79,13 +77,6 @@ impl Flaker {
 		for w in wtr {
 			bytes.push(w);
 		}
-
-		// (0..7).map(|x| {
-		// 	println!("{:?}", x);
-		// 	let pos = x * 8;
-		// 	println!("{:?} is {:0>8b}", x, (self.last_oxidized_in_ms >> pos) as u8);
-		// 	bytes.push((self.last_oxidized_in_ms >> pos) as u8);
-		// });
 
 		BigUint::from_bytes_le(&bytes)
 	}
@@ -96,8 +87,6 @@ impl Flaker {
 
 		now_ts.sec as u64 + now_ts.nsec as u64 / 1000 / 1000
 	}
-
-
 }
 
 #[test]
