@@ -23,11 +23,11 @@ impl Flaker {
 		Flaker::new(identifier, default_epoch_ms, false)
 	}
 
-	pub fn new(identifier: Vec<u8>, epoch: u64, littleEndian: bool) -> Flaker {
+	pub fn new(identifier: Vec<u8>, epoch: u64, little_endian: bool) -> Flaker {
 		// TODO : check that identifier has a length of 6
 		let mut l_identifier = identifier.clone();
 
-		if !littleEndian {
+		if !little_endian {
 			l_identifier.reverse();
 		}
 
