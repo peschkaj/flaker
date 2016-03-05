@@ -1,128 +1,140 @@
-extern crate time;
-extern crate num;
-extern crate byteorder;
-use num::BigUint;
-use time::Timespec;
-use byteorder::{LittleEndian, WriteBytesExt};
+#[allow(dead_code)]
+mod flaker {
 
-#[derive(Debug)]
-enum FlakeError {
-    ClockIsRunningBackwards
-}
+    extern crate time;
+    extern crate num;
+    extern crate byteorder;
+    use self::num::BigUint;
+    use self::time::Timespec;
+    use self::byteorder::{LittleEndian, WriteBytesExt};
 
-trait HasFlakes {
-	fn update(&mut self) -> Result<(), FlakeError>;
-	fn get_id(&mut self) -> BigUint;
-}
 
-struct Flaker {
-    identifier: Vec<u8>,
-    epoch: u64,
-    last_generated_time_ms: u64,
-    counter: u32,
-}
 
-impl Flaker {
-	pub fn new_from_identifier(identifier: Vec<u8>) -> Flaker {
-		let default_epoch_ts = Timespec::new(0, 0);
-		let default_epoch_ms = default_epoch_ts.sec as u64 + (default_epoch_ts.nsec as u64 / 1000 / 1000);
+    #[derive(Debug)]
+    pub enum FlakeError {
+        ClockIsRunningBackwards
+    }
 
-		Flaker::new(identifier, default_epoch_ms, false)
-	}
+    pub trait HasFlakes {
+        fn update(&mut self) -> Result<(), FlakeError>;
+        fn get_id(&mut self) -> BigUint;
+    }
 
-	pub fn new(identifier: Vec<u8>, epoch: u64, little_endian: bool) -> Flaker {
-		// TODO : check that identifier has a length of 6
-		let mut l_identifier = identifier.clone();
+    pub struct Flaker {
+        identifier: Vec<u8>,
+        last_generated_time_ms: u64,
+        counter: u32,
+    }
+    
+    impl Flaker {
+        pub fn new_from_identifier(identifier: Vec<u8>) -> Flaker {
+            let default_epoch_ts = Timespec::new(0, 0);
+            let default_epoch_ms = default_epoch_ts.sec as u64 + (default_epoch_ts.nsec as u64 / 1000 / 1000);
 
-		if !little_endian {
-			l_identifier.reverse();
-		}
+            Flaker::new(identifier, false)
+        }
 
-		Flaker { identifier: l_identifier,
-				 epoch: epoch,
-				 last_generated_time_ms: Flaker::current_time_in_ms(),
-				 counter: 0
-			   }
-	}
+        pub fn new(identifier: Vec<u8>, little_endian: bool) -> Flaker {
+            let mut l_identifier = identifier.clone();
+            
+            if l_identifier.len() < 6 {
+                panic!("Identifier must have a length of 6");
+            }
 
-	fn current_time_in_ms() -> u64 {
-		let now = time::now();
-		let now_ts = now.to_timespec();
+            if !little_endian {
+                l_identifier.reverse();
+            }
 
-        // TODO should be `now_ts` minus `epoch`
-        // changing this means we should rename this function, too
-		now_ts.sec as u64 + (now_ts.nsec as u64 / 1000 / 1000)
-	}
-}
+            Flaker { identifier: l_identifier,
+                    last_generated_time_ms: Flaker::current_time_in_ms(),
+                    counter: 0
+                }
+        }
 
-impl HasFlakes for Flaker {
-	fn update(&mut self) -> Result<(), FlakeError> {
-		let current_time_in_ms = Flaker::current_time_in_ms();
+        fn current_time_in_ms() -> u64 {
+            let now = time::now();
+            let now_ts = now.to_timespec();
+            
 
-		if self.last_generated_time_ms > current_time_in_ms {
-			return Result::Err(FlakeError::ClockIsRunningBackwards);
-		}
+            // TODO should be `now_ts` minus `epoch`
+            // changing this means we should rename this function, too
+            now_ts.sec as u64 + (now_ts.nsec as u64 / 1000 / 1000)
+        }
+    }
 
-		if self.last_generated_time_ms < current_time_in_ms {
-			self.counter = 0;
-		}
-		else {
-			self.counter += 1;
-		}
+    impl HasFlakes for Flaker {
+        fn update(&mut self) -> Result<(), FlakeError> {
+            let current_time_in_ms = Flaker::current_time_in_ms();
 
-		self.last_generated_time_ms = current_time_in_ms;
+            if self.last_generated_time_ms > current_time_in_ms {
+                return Result::Err(FlakeError::ClockIsRunningBackwards);
+            }
 
-		Ok(())
-	}
+            if self.last_generated_time_ms < current_time_in_ms {
+                self.counter = 0;
+            }
+            else {
+                self.counter += 1;
+            }
 
-    // TODO signature needs to be changed to return a result
-	fn get_id(&mut self) -> BigUint {
-        // TODO check this for OK-ness
-		self.update();
+            self.last_generated_time_ms = current_time_in_ms;
 
-        // Create a new vec of bytes
-		let mut bytes = Vec::new();
+            Ok(())
+        }
 
-        // push the counter into bytes
-        // TODO why did I use a u32 for counter if I only use 16 bits of it?
-		bytes.push(self.counter as u8);
-		bytes.push((self.counter >> 8) as u8);
+        // TODO signature needs to be changed to return a result
+        fn get_id(&mut self) -> BigUint {
+            // TODO check this for OK-ness
+            if let Err(e) = self.update() {
+                panic!(e);
+            }
+            
+            
 
-		// next 6 bytes are the worker id
-		for i in &self.identifier {
-			bytes.push(*i);
-		}
+            // Create a new vec of bytes
+            let mut bytes = Vec::new();
 
-		let mut wtr = vec![];
+            // push the counter into bytes
+            // TODO why did I use a u32 for counter if I only use 16 bits of it?
+            bytes.push(self.counter as u8);
+            bytes.push((self.counter >> 8) as u8);
 
-		wtr.write_u64::<LittleEndian>(self.last_generated_time_ms).unwrap();
+            // next 6 bytes are the worker id
+            for i in &self.identifier {
+                bytes.push(*i);
+            }
 
-		for w in wtr {
-			bytes.push(w);
-		}
+            let mut wtr = vec![];
 
-		BigUint::from_bytes_le(&bytes)
-	}
-}
+            wtr.write_u64::<LittleEndian>(self.last_generated_time_ms).unwrap();
 
-#[test]
-fn ids_change_over_time() {
-	let mut f1 = Flaker::new_from_identifier(vec![0, 1, 2, 3, 4, 5]);
-	let id1 = f1.get_id();
-	std::thread::sleep(Duration::from_millis(50));
-	let id2 = f1.get_id();
+            for w in wtr {
+                bytes.push(w);
+            }
 
-	println!("{} < {}", id1, id2);
+            BigUint::from_bytes_le(&bytes)
+        }
+    }
 
-	assert!(id1 < id2);
-}
+    #[test]
+    fn ids_change_over_time() {
+        let mut f1 = Flaker::new_from_identifier(vec![0, 1, 2, 3, 4, 5]);
+        let id1 = f1.get_id();
+        std::thread::sleep(Duration::from_millis(50));
+        let id2 = f1.get_id();
 
-#[test]
-fn ids_change_quickly() {
-	let mut f1 = Flaker::new_from_identifier(vec![0, 1, 2, 3, 4, 5]);
+        println!("{} < {}", id1, id2);
 
-	let id3 = f1.get_id();
-	let id4 = f1.get_id();
+        assert!(id1 < id2);
+    }
 
-	assert!(id3 < id4);
+    #[test]
+    fn ids_change_quickly() {
+        let mut f1 = Flaker::new_from_identifier(vec![0, 1, 2, 3, 4, 5]);
+
+        let id3 = f1.get_id();
+        let id4 = f1.get_id();
+
+        assert!(id3 < id4);
+    }
 }
