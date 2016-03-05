@@ -1,5 +1,4 @@
-#[allow(dead_code)]
-mod flaker {
+pub mod flaker {
 
     extern crate time;
     extern crate num;
@@ -16,7 +15,7 @@ mod flaker {
 
     pub trait HasFlakes {
         fn update(&mut self) -> Result<(), FlakeError>;
-        fn get_id(&mut self) -> BigUint;
+        fn get_id(&mut self) -> Result<BigUint, FlakeError>;
     }
 
     pub struct Flaker {
@@ -51,10 +50,32 @@ mod flaker {
             let now = time::now();
             let now_ts = now.to_timespec();
             
-
-            // TODO should be `now_ts` minus `epoch`
-            // changing this means we should rename this function, too
             now_ts.sec as u64 + (now_ts.nsec as u64 / 1000 / 1000)
+        }
+        
+        fn construct_id(&mut self) -> BigUint {
+            // Create a new vec of bytes
+            let mut bytes = Vec::new();
+
+            // push the counter into bytes
+            // TODO why did I use a u32 for counter if I only use 16 bits of it?
+            bytes.push(self.counter as u8);
+            bytes.push((self.counter >> 8) as u8);
+
+            // next 6 bytes are the worker id
+            for i in &self.identifier {
+                bytes.push(*i);
+            }
+
+            let mut wtr = vec![];
+
+            wtr.write_u64::<LittleEndian>(self.last_generated_time_ms).unwrap();
+
+            for w in wtr {
+                bytes.push(w);
+            }
+            
+            BigUint::from_bytes_le(&bytes)
         }
     }
 
@@ -79,36 +100,14 @@ mod flaker {
         }
 
         // TODO signature needs to be changed to return a result
-        fn get_id(&mut self) -> BigUint {
+        fn get_id(&mut self) -> Result<BigUint, FlakeError> {
             // TODO check this for OK-ness
-            if let Err(e) = self.update() {
-                panic!(e);
-            }
+            let update_result = self.update();
             
-            
-
-            // Create a new vec of bytes
-            let mut bytes = Vec::new();
-
-            // push the counter into bytes
-            // TODO why did I use a u32 for counter if I only use 16 bits of it?
-            bytes.push(self.counter as u8);
-            bytes.push((self.counter >> 8) as u8);
-
-            // next 6 bytes are the worker id
-            for i in &self.identifier {
-                bytes.push(*i);
+            match update_result {
+                Ok(_) => Ok(self.construct_id()),
+                Err(err) => Err(err),
             }
-
-            let mut wtr = vec![];
-
-            wtr.write_u64::<LittleEndian>(self.last_generated_time_ms).unwrap();
-
-            for w in wtr {
-                bytes.push(w);
-            }
-
-            BigUint::from_bytes_le(&bytes)
         }
     }
 
