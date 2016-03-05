@@ -25,7 +25,7 @@ struct Flaker {
 impl Flaker {
 	pub fn new_from_identifier(identifier: Vec<u8>) -> Flaker {
 		let default_epoch_ts = Timespec::new(0, 0);
-		let default_epoch_ms = default_epoch_ts.sec as u64 + default_epoch_ts.nsec as u64 / 1000 / 1000;
+		let default_epoch_ms = default_epoch_ts.sec as u64 + (default_epoch_ts.nsec as u64 / 1000 / 1000);
 
 		Flaker::new(identifier, default_epoch_ms, false)
 	}
@@ -40,7 +40,7 @@ impl Flaker {
 
 		Flaker { identifier: l_identifier,
 				 epoch: epoch,
-				 last_generated_time_ms: Flaker::current_time_in_ms(), 
+				 last_generated_time_ms: Flaker::current_time_in_ms(),
 				 counter: 0
 			   }
 	}
@@ -49,7 +49,9 @@ impl Flaker {
 		let now = time::now();
 		let now_ts = now.to_timespec();
 
-		now_ts.sec as u64 + now_ts.nsec as u64 / 1000 / 1000
+        // TODO should be `now_ts` minus `epoch`
+        // changing this means we should rename this function, too
+		now_ts.sec as u64 + (now_ts.nsec as u64 / 1000 / 1000)
 	}
 }
 
@@ -73,11 +75,16 @@ impl HasFlakes for Flaker {
 		Ok(())
 	}
 
+    // TODO signature needs to be changed to return a result
 	fn get_id(&mut self) -> BigUint {
+        // TODO check this for OK-ness
 		self.update();
 
+        // Create a new vec of bytes
 		let mut bytes = Vec::new();
 
+        // push the counter into bytes
+        // TODO why did I use a u32 for counter if I only use 16 bits of it?
 		bytes.push(self.counter as u8);
 		bytes.push((self.counter >> 8) as u8);
 
@@ -102,7 +109,7 @@ impl HasFlakes for Flaker {
 fn ids_change_over_time() {
 	let mut f1 = Flaker::new_from_identifier(vec![0, 1, 2, 3, 4, 5]);
 	let id1 = f1.get_id();
-	std::thread::sleep_ms(50);
+	std::thread::sleep(Duration::from_millis(50));
 	let id2 = f1.get_id();
 
 	println!("{} < {}", id1, id2);
@@ -116,6 +123,6 @@ fn ids_change_quickly() {
 
 	let id3 = f1.get_id();
 	let id4 = f1.get_id();
-	
+
 	assert!(id3 < id4);
 }
