@@ -5,7 +5,6 @@ mod flaker {
     extern crate num;
     extern crate byteorder;
     use self::num::BigUint;
-    use self::time::Timespec;
     use self::byteorder::{LittleEndian, WriteBytesExt};
 
 
@@ -28,9 +27,6 @@ mod flaker {
     
     impl Flaker {
         pub fn new_from_identifier(identifier: Vec<u8>) -> Flaker {
-            let default_epoch_ts = Timespec::new(0, 0);
-            let default_epoch_ms = default_epoch_ts.sec as u64 + (default_epoch_ts.nsec as u64 / 1000 / 1000);
-
             Flaker::new(identifier, false)
         }
 
