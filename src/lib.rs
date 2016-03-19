@@ -88,23 +88,27 @@ pub mod flaker {
         /// * 16-bit sequence number that is incremented when more than one identifier is requested in the same millisecond and reset to 0 when the clock moves forward
         fn construct_id(&mut self) -> BigUint {
             // Create a new vec of bytes
-            let mut bytes = Vec::new();
+            // let mut bytes = Vec::new();
+            let mut bytes = [0 as u8; 8];
 
             // push the counter into bytes
-            bytes.push(self.counter as u8);
-            bytes.push((self.counter >> 8) as u8);
+            bytes[0] = self.counter as u8;
+            // bytes.push(self.counter as u8);
+            bytes[1] = (self.counter >> 8) as u8;
+            // bytes.push((self.counter >> 8) as u8);
 
             // next 6 bytes are the worker id
-            for i in &self.identifier {
-                bytes.push(*i);
+            for (pos, byte) in &self.identifier.iter().enumerate() {
+                bytes[pos + 2] = byte;
             }
 
             let mut wtr = vec![];
 
             wtr.write_u64::<LittleEndian>(self.last_generated_time_ms).unwrap();
 
-            for w in wtr {
-                bytes.push(w);
+            for (pos, w) in wtr.into_iter().enumerate() {
+                bytes[pos + 4] = w;
+                // bytes.push(w);
             }
             
             BigUint::from_bytes_le(&bytes)
