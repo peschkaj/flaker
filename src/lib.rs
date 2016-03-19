@@ -37,8 +37,8 @@ pub mod flaker {
     pub struct Flaker {
         identifier: Vec<u8>,
         last_generated_time_ms: u64,
-        counter: u32,
-    }
+        counter: u16,
+    }   
     
     impl Flaker {
         /// Returns a new Flaker based on the specified identifier
@@ -91,7 +91,6 @@ pub mod flaker {
             let mut bytes = Vec::new();
 
             // push the counter into bytes
-            // TODO why did I use a u32 for counter if I only use 16 bits of it?
             bytes.push(self.counter as u8);
             bytes.push((self.counter >> 8) as u8);
 
