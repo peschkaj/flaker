@@ -89,17 +89,15 @@ pub mod flaker {
         fn construct_id(&mut self) -> BigUint {
             // Create a new vec of bytes
             // let mut bytes = Vec::new();
-            let mut bytes = [0 as u8; 8];
+            let mut bytes = [0 as u8; 16];
 
             // push the counter into bytes
             bytes[0] = self.counter as u8;
-            // bytes.push(self.counter as u8);
             bytes[1] = (self.counter >> 8) as u8;
-            // bytes.push((self.counter >> 8) as u8);
 
             // next 6 bytes are the worker id
-            for (pos, byte) in &self.identifier.iter().enumerate() {
-                bytes[pos + 2] = byte;
+            for (pos, byte) in self.identifier.iter().enumerate() {
+                bytes[pos + 2] = *byte;
             }
 
             let mut wtr = vec![];
@@ -107,8 +105,7 @@ pub mod flaker {
             wtr.write_u64::<LittleEndian>(self.last_generated_time_ms).unwrap();
 
             for (pos, w) in wtr.into_iter().enumerate() {
-                bytes[pos + 4] = w;
-                // bytes.push(w);
+                bytes[pos + 8] = w;
             }
             
             BigUint::from_bytes_le(&bytes)
@@ -151,8 +148,7 @@ pub mod flaker {
     fn ids_change_over_time() {
         use std::time::Duration;
         use std::thread;
-        
-        let mut f1 = Flaker::new_from_identifier(vec![0, 1, 2, 3, 4, 5]);
+                let mut f1 = Flaker::new_from_identifier(vec![0, 1, 2, 3, 4, 5]);
         let id1 = f1.get_id().unwrap();
         thread::sleep(Duration::from_millis(50));
         let id2 = f1.get_id().unwrap();
@@ -168,6 +164,8 @@ pub mod flaker {
 
         let id3 = f1.get_id().unwrap();
         let id4 = f1.get_id().unwrap();
+        
+        println!("{} < {}", id3, id4);
 
         assert!(id3 < id4);
     }
