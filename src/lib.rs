@@ -21,9 +21,6 @@ pub mod flaker {
     use self::num::BigUint;
     use self::byteorder::{LittleEndian, WriteBytesExt};
     
-
-
-
     #[derive(Debug)]
     pub enum FlakeError {
         ClockIsRunningBackwards
@@ -35,7 +32,7 @@ pub mod flaker {
     }
 
     pub struct Flaker {
-        identifier: Vec<u8>,
+        identifier: [u8; 6],
         last_generated_time_ms: u64,
         counter: u16,
     }   
@@ -46,8 +43,18 @@ pub mod flaker {
         /// # Arguments
         ///
         /// * `identifier` - A 6 byte vec that provides some arbitrary identification.
+        ///
+        /// # Remarks
+        ///
+        /// This is a convenience function that converts the `identifier` `vec` into
+        /// a 6 byte array. Where possible, prefer the array and use `new`.
+        ///
+        /// *Note*: This also assumes the `flaker` is being created on a little endian
+        /// CPU. 
         pub fn new_from_identifier(identifier: Vec<u8>) -> Flaker {
-            Flaker::new(identifier, false)
+            let mut a_identifier: [u8; 6] = [0 as u8; 6];
+            a_identifier.clone_from_slice(&identifier);
+            Flaker::new(a_identifier, true)
         }
 
         /// Returns a new Flaker based on the specified identifier
@@ -55,22 +62,20 @@ pub mod flaker {
         /// # Arguments
         ///
         /// * `identifier` - A 6 byte vec that provides some arbitrary identification.
-        /// * `little_endian` - You know, just in case you have a little endian system. This is important for byte order when constructing the flake.
-        pub fn new(identifier: Vec<u8>, little_endian: bool) -> Flaker {
-            let mut l_identifier = identifier.clone();
-            
-            if l_identifier.len() < 6 {
+        /// * `little_endian` - For specifying endianness. This is important for byte order when constructing the flake.
+        pub fn new(mut identifier: [u8; 6], little_endian: bool) -> Flaker {
+            if identifier.len() < 6 {
                 panic!("Identifier must have a length of 6");
             }
 
             if !little_endian {
-                l_identifier.reverse();
+                identifier.reverse();
             }
 
-            Flaker { identifier: l_identifier,
+            Flaker { identifier: identifier,
                     last_generated_time_ms: Flaker::current_time_in_ms(),
                     counter: 0
-                }
+                   }
         }
 
         /// Returns the current UNIX time in milliseconds
@@ -88,7 +93,6 @@ pub mod flaker {
         /// * 16-bit sequence number that is incremented when more than one identifier is requested in the same millisecond and reset to 0 when the clock moves forward
         fn construct_id(&mut self) -> BigUint {
             // Create a new vec of bytes
-            // let mut bytes = Vec::new();
             let mut bytes = [0 as u8; 16];
 
             // push the counter into bytes
@@ -148,7 +152,8 @@ pub mod flaker {
     fn ids_change_over_time() {
         use std::time::Duration;
         use std::thread;
-                let mut f1 = Flaker::new_from_identifier(vec![0, 1, 2, 3, 4, 5]);
+        
+        let mut f1 = Flaker::new_from_identifier(vec![0, 1, 2, 3, 4, 5]);
         let id1 = f1.get_id().unwrap();
         thread::sleep(Duration::from_millis(50));
         let id2 = f1.get_id().unwrap();
@@ -160,7 +165,7 @@ pub mod flaker {
 
     #[test]
     fn ids_change_quickly() {
-        let mut f1 = Flaker::new_from_identifier(vec![0, 1, 2, 3, 4, 5]);
+        let mut f1 = Flaker::new([0, 1, 2, 3, 4, 5], true);
 
         let id3 = f1.get_id().unwrap();
         let id4 = f1.get_id().unwrap();
