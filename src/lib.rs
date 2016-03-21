@@ -26,11 +26,6 @@ pub mod flaker {
         ClockIsRunningBackwards
     }
 
-    pub trait HasFlakes {
-        fn update(&mut self) -> Result<(), FlakeError>;
-        fn get_id(&mut self) -> Result<BigUint, FlakeError>;
-    }
-
     pub struct Flaker {
         identifier: [u8; 6],
         last_generated_time_ms: u64,
@@ -80,10 +75,12 @@ pub mod flaker {
 
         /// Returns the current UNIX time in milliseconds
         fn current_time_in_ms() -> u64 {
-            let now = time::now();
-            let now_ts = now.to_timespec();
+            let now_ts = time::now_utc().to_timespec();
             
-            now_ts.sec as u64 + (now_ts.nsec as u64 / 1000 / 1000)
+            // Convert current time to milliseconds by multiplying seconds by 1000
+            // Convert current fractional seconds from nanoseconds to milliseconds
+            // Then, get the current time as milliseconds.
+            (now_ts.sec as u64 * 1000) + (now_ts.nsec as u64 / 1000 / 1000)
         }
         
         /// Creates a new flake ID from the identifier, current time, and an internal counter.
@@ -114,14 +111,13 @@ pub mod flaker {
             
             BigUint::from_bytes_le(&bytes)
         }
-    }
 
-    impl HasFlakes for Flaker {
         /// Update internal data structures.
         fn update(&mut self) -> Result<(), FlakeError> {
             let current_time_in_ms = Flaker::current_time_in_ms();
 
             if self.last_generated_time_ms > current_time_in_ms {
+                println!("\t{} > {}", self.last_generated_time_ms, current_time_in_ms);
                 return Result::Err(FlakeError::ClockIsRunningBackwards);
             }
 
@@ -138,7 +134,7 @@ pub mod flaker {
         }
 
         /// Generate a new ID 
-        fn get_id(&mut self) -> Result<BigUint, FlakeError> {
+        pub fn get_id(&mut self) -> Result<BigUint, FlakeError> {
             let update_result = self.update();
             
             match update_result {
