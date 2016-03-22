@@ -28,7 +28,13 @@ pub struct Flaker {
     identifier: [u8; 6],
     last_generated_time_ms: u64,
     counter: u16,
-}   
+}
+
+#[derive(PartialEq)]
+pub enum Endianness {
+    LittleEndian,
+    BigEndian,
+}
 
 impl Flaker {
     /// Returns a new Flaker based on the specified identifier
@@ -47,7 +53,7 @@ impl Flaker {
     pub fn new_from_identifier(identifier: Vec<u8>) -> Flaker {
         let mut a_identifier: [u8; 6] = [0 as u8; 6];
         a_identifier.clone_from_slice(&identifier);
-        Flaker::new(a_identifier, true)
+        Flaker::new(a_identifier, Endianness::LittleEndian)
     }
 
     /// Returns a new Flaker based on the specified identifier
@@ -56,12 +62,12 @@ impl Flaker {
     ///
     /// * `identifier` - A 6 byte vec that provides some arbitrary identification.
     /// * `little_endian` - For specifying endianness. This is important for byte order when constructing the flake.
-    pub fn new(mut identifier: [u8; 6], little_endian: bool) -> Flaker {
+    pub fn new(mut identifier: [u8; 6], endian: Endianness) -> Flaker {
         if identifier.len() < 6 {
             panic!("Identifier must have a length of 6");
         }
-
-        if !little_endian {
+        
+        if endian == Endianness::BigEndian {
             identifier.reverse();
         }
 
@@ -159,7 +165,7 @@ fn ids_change_over_time() {
 
 #[test]
 fn ids_change_quickly() {
-    let mut f1 = Flaker::new([0, 1, 2, 3, 4, 5], true);
+    let mut f1 = Flaker::new([0, 1, 2, 3, 4, 5], Endianness::LittleEndian);
 
     let id3 = f1.get_id().unwrap();
     let id4 = f1.get_id().unwrap();

@@ -1,7 +1,9 @@
 extern crate flaker;
 
+use flaker::Endianness;
+
 fn main() {
-    let mut flake = flaker::Flaker::new([0, 1, 2, 3, 4, 5], true);
+    let mut flake = flaker::Flaker::new([0, 1, 2, 3, 4, 5], Endianness::LittleEndian);
     let mut error_count = 0;
     let mut range = 0..10_000;
     
