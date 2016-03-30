@@ -18,6 +18,15 @@ Identifiers are generated as 128-bit numbers:
 * 48-bit worker identifier - typically this would be the MAC address, but you could use whatever you want.
 * 16-bit sequence number that is incremented when more than one identifier is requested in the same millisecond and reset to 0 when the clock moves forward.
 
+## License
+
+Licensed under either of
+
+ * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
+
 ## Questions
 
 ### How should I use this?
@@ -50,6 +59,8 @@ While machine identity should be relatively meaningless in a distributed system,
 ### But timezones!
 
 `flaker` uses UTC when generating IDs. I don't trust you to set your server clocks to UTC, so I just took that leap for you.
+
+
 
 [1]: https://github.com/boundary/flake
 [2]: https://github.com/peschkaj/rustflakes
