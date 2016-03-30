@@ -121,7 +121,6 @@ impl Flaker {
         let current_time_in_ms = Flaker::current_time_in_ms();
 
         if self.last_generated_time_ms > current_time_in_ms {
-            println!("\t{} > {}", self.last_generated_time_ms, current_time_in_ms);
             return Result::Err(FlakeError::ClockIsRunningBackwards);
         }
 
@@ -139,12 +138,7 @@ impl Flaker {
 
     /// Generate a new ID 
     pub fn get_id(&mut self) -> Result<BigUint, FlakeError> {
-        let update_result = self.update();
-        
-        match update_result {
-            Ok(_) => Ok(self.construct_id()),
-            Err(err) => Err(err),
-        }
+        self.update().map(|_| self.construct_id())
     }
 }
 
