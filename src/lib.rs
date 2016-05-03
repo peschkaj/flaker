@@ -84,7 +84,7 @@ impl Flaker {
     /// * 48-bit worker identifier
     /// * 16-bit sequence number that is incremented when more than one identifier is requested in the same millisecond and reset to 0 when the clock moves forward
     fn construct_id(&mut self) -> BigUint {
-        // Create a new vec of bytes
+        // Create a new slice of bytes
         let mut bytes = [0 as u8; 16];
 
         // push the counter into bytes
@@ -100,10 +100,12 @@ impl Flaker {
 
         wtr.write_u64::<LittleEndian>(self.last_generated_time_ms).unwrap();
 
+        // fill the rest of the buffer with the current time, as bytes
         for (pos, w) in wtr.into_iter().enumerate() {
             bytes[pos + 8] = w;
         }
         
+        // create a BigUint from the buffer
         BigUint::from_bytes_le(&bytes)
     }
 
