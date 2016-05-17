@@ -4,9 +4,9 @@
 // http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
-extern crate time;
 extern crate num;
 extern crate byteorder;
+use std::time;
 use self::num::BigUint;
 use self::byteorder::{LittleEndian, WriteBytesExt};
 
@@ -70,12 +70,15 @@ impl Flaker {
 
     /// Returns the current UNIX time in milliseconds
     fn current_time_in_ms() -> u64 {
-        let now_ts = time::now_utc().to_timespec();
+        let now_ts = match time::SystemTime::now().duration_since(time::UNIX_EPOCH) {
+            Ok(dur) => dur,
+            Err(err) => err.duration(),
+        };
         
         // Convert current time to milliseconds by multiplying seconds by 1000
         // Convert current fractional seconds from nanoseconds to milliseconds
         // Then, get the current time as milliseconds.
-        (now_ts.sec as u64 * 1000) + (now_ts.nsec as u64 / 1000 / 1000)
+        now_ts.as_secs() * 1000 + (now_ts.subsec_nanos() / 1000_000) as u64
     }
     
     /// Creates a new flake ID from the identifier, current time, and an internal counter.
