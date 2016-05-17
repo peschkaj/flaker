@@ -1,6 +1,6 @@
 [package]
 name = "flaker"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Jeremiah Peschka <jeremiah.peschka@gmail.com>"]
 description = "A flake implementation for Rust. Flaker generates 128-bit ordered IDs that can be generated across multiple machines/processes but can be counted on to be lexically sortable."
 repository = "https://github.com/peschkaj/flaker"

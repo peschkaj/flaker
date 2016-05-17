@@ -60,6 +60,11 @@ While machine identity should be relatively meaningless in a distributed system,
 
 `flaker` uses UTC when generating IDs. I don't trust you to set your server clocks to UTC, so I just took that leap for you.
 
+## Thanks
+
+Thanks to:
+
+* [serprex](https://github.com/serprex) for the move to replace `time` with `std::time`.
 
 
 [1]: https://github.com/boundary/flake
