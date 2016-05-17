@@ -8,6 +8,5 @@ homepage = "https://github.com/peschkaj/flaker"
 license = "Apache-2.0/MIT"
 
 [dependencies]
-time = "0.1"
 num = "0.1.27"
 byteorder = "0.3"
